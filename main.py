@@ -34,11 +34,49 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("太空防卫战")
 clock = pygame.time.Clock()
 
+def get_chinese_font(size):
+    import platform
+    system = platform.system()
+    
+    if system == "Darwin":
+        font_names = [
+            "pingfangsc",
+            "pingfang",
+            "stxihei",
+            "stkaiti",
+            "heititc",
+            "songti",
+            "heiti",
+        ]
+    elif system == "Windows":
+        font_names = [
+            "microsoftyahei",
+            "simhei",
+            "simsun",
+            "msyh",
+        ]
+    else:
+        font_names = [
+            "notosanscjksc",
+            "notosanscjktc",
+            "arialunicode",
+        ]
+    
+    font_names.extend(["arialunicode", None])
+    
+    for font_name in font_names:
+        font = pygame.font.SysFont(font_name, size)
+        test_surface = font.render("正", True, (255, 255, 255))
+        if test_surface.get_width() > size * 0.4:
+            return font
+    
+    return pygame.font.SysFont(None, size)
+
 font = pygame.font.SysFont("arial", 36)
 small_font = pygame.font.SysFont("arial", 24)
 title_font = pygame.font.SysFont("arial", 60)
-chinese_font = pygame.font.SysFont("microsoftyahei", 32)
-chinese_small_font = pygame.font.SysFont("microsoftyahei", 20)
+chinese_font = get_chinese_font(36)
+chinese_small_font = get_chinese_font(20)
 
 SCORES_FILE = "highscores.json"
 MAX_HIGH_SCORES = 10
@@ -320,10 +358,10 @@ class Player:
         self.engine_particles = []
 
     def move(self, dx, dy):
-        # BUG: 移动速度计算错误 - 同时按两个方向键时速度会叠加（斜向移动更快）
         if dx != 0 and dy != 0:
-            self.rect.x += dx * self.speed * 1.414  # 斜向移动速度增加40%
-            self.rect.y += dy * self.speed * 1.414
+            speed_factor = 1 / 1.414
+            self.rect.x += dx * self.speed * speed_factor
+            self.rect.y += dy * self.speed * speed_factor
         else:
             self.rect.x += dx * self.speed
             self.rect.y += dy * self.speed
@@ -533,9 +571,11 @@ class Game:
             b = int(20 + ratio * 30)
             pygame.draw.line(surface, (r, g, b), (0, y), (SCREEN_WIDTH, y))
         
-        # BUG: 暂停时星星仍在移动
+        if self.state == GameState.PLAYING:
+            for star in self.stars:
+                star.update()
+        
         for star in self.stars:
-            star.update()
             star.draw(surface)
 
     def draw_ui(self, surface):
@@ -580,7 +620,7 @@ class Game:
             surface.blit(overlay, (0, 0))
             
             over_text = title_font.render("GAME OVER", True, RED)
-            score_text = font.render(f"最终得分: {self.score}", True, WHITE)
+            score_text = get_chinese_font(36).render(f"最终得分: {self.score}", True, WHITE)
             restart_text = chinese_small_font.render("按 [R] 重新开始", True, GREEN)
             menu_text = chinese_small_font.render("按 [M] 返回主菜单", True, CYAN)
             scores_text = chinese_small_font.render("按 [H] 查看排行榜", True, YELLOW)
